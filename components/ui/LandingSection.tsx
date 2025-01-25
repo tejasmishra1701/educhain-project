@@ -21,7 +21,7 @@ const LandingSections = () => {
               <Link href="#features">Features</Link>
             </Button>
             <Button asChild>
-              <Link href="/signup">Connect</Link>
+              <Link href="/connect">Connect</Link>
             </Button>
           </nav>
         </div>

@@ -1,110 +1,125 @@
 import React from "react";
 import Link from "next/link";
-import { Search, Upload } from "lucide-react";
-import { Menu } from "lucide-react";
+import { Search, Upload, ShieldCheck, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 const LandingSections = () => {
   return (
-    <div className="flex flex-col min-h-screen">
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 items-center px-6 justify-between">
-        <div className="mr-4 hidden md:flex">
-          <Link className="mr-6 flex items-center space-x-2" href="/">
-            <span className="hidden font-bold sm:inline-block">ResumeOnRails</span>
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-900 dark:to-gray-800">
+      <header className="sticky top-0 z-50 w-full border-b bg-white/80 dark:bg-gray-900/80 backdrop-blur-md">
+        <div className="container mx-auto flex h-16 items-center px-4 md:px-6 justify-between">
+          <Link
+            href="/"
+            className="flex items-center space-x-2 font-bold text-xl text-gray-900 dark:text-white"
+          >
+            <ShieldCheck className="w-8 h-8 text-blue-600" />
+            ResumeOnRails
           </Link>
-          <nav className="flex items-center space-x-6 text-sm font-medium">
-            <Link href="#faq">FAQ</Link>
-          </nav>
-        </div>
-        <button className="inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground h-10 w-10 px-0 md:hidden">
-          <Menu className="h-6 w-6" />
-          <span className="sr-only">Toggle Menu</span>
-        </button>
-        <div className="flex items-center space-x-2">
-          <nav className="flex items-center">
+          <nav className="flex items-center space-x-4">
+            <Button asChild variant="ghost">
+              <Link href="#features">Features</Link>
+            </Button>
             <Button asChild>
               <Link href="/signup">Connect</Link>
             </Button>
           </nav>
         </div>
-      </div>
-    </header>
-      <main className="flex-1 flex-col flex items-center justify-center">
-        <section className="w-full pt-6">
-          <div className="container px-4 md:px-6">
-            <div className="flex flex-col items-center space-y-2 text-center">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl">
-                  Unlock the Power of Your Credentials with ResumeOnRails
-                </h1>
-                <p className="mx-auto max-w-[700px] text-gray-500 md:text-xl dark:text-gray-400">
-                  Stay ahead with a system designed to keep your
-                  data accessible, updatable, and always at your fingertips.
-                </p>
-              </div>
-              <div className="space-x-4">
-                {/* <Button asChild>
-                  <Link href="/signup">Get Started</Link>
-                </Button> */}
-                <form action=""></form>
-              </div>
-            </div>
+      </header>
+
+      <main className="container mx-auto flex-1 flex flex-col items-center justify-center px-4 md:px-6 py-12">
+        <section className="text-center max-w-4xl mx-auto space-y-6">
+          <div className="space-y-4">
+            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white leading-tight tracking-tight">
+              Secure Your Educational Journey with{" "}
+              <span className="text-blue-600">ResumeOnRails</span>
+            </h1>
+            <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+              Revolutionize your credential management with blockchain-powered
+              document verification, ensuring your academic achievements are
+              always accessible, verifiable, and secure.
+            </p>
+          </div>
+          <div className="flex justify-center space-x-4">
+            <Button asChild size="lg" className="group">
+              <Link href="/connect">
+                <Rocket className="mr-2 h-5 w-5 group-hover:animate-bounce" />
+                Get Started
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <Link href="#how-it-works">Learn More</Link>
+            </Button>
           </div>
         </section>
-        <div className="grid md:grid-cols-2 gap-8 mt-6">
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                  <Search className="w-8 h-8 text-primary" />
+
+        <div className="grid md:grid-cols-2 gap-8 mt-16 w-full max-w-4xl">
+          <Card className="hover:shadow-2xl transition-all duration-300 ease-in-out transform hover:-translate-y-2 dark:bg-gray-800 dark:border-gray-700">
+            <CardContent className="p-8">
+              <div className="text-center space-y-6">
+                <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto">
+                  <Search className="w-10 h-10 text-blue-600" />
                 </div>
-                <h2 className="text-2xl font-semibold">Search Documents</h2>
-                <p className="text-gray-600 dark:text-gray-300">
-                  Verify and view educational documents using eduID
-                </p>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                    Search Documents
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-300 mb-6">
+                    Instantly verify and access your educational documents using
+                    your unique eduID with just a few clicks.
+                  </p>
+                </div>
                 <Link href="/search">
-                  <Button className="w-auto mt-3">
-                    Search
-                  </Button>
+                  <Button className="w-full">Search Documents</Button>
                 </Link>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                  <Upload className="w-8 h-8 text-primary" />
+          <Card className="hover:shadow-2xl transition-all duration-300 ease-in-out transform hover:-translate-y-2 dark:bg-gray-800 dark:border-gray-700">
+            <CardContent className="p-8">
+              <div className="text-center space-y-6">
+                <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto">
+                  <Upload className="w-10 h-10 text-green-600" />
                 </div>
-                <h2 className="text-2xl font-semibold">Upload Documents</h2>
-                <p className="text-gray-600 dark:text-gray-300">
-                  Connect your eduChain wallet and upload new documents
-                </p>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+                    Upload Documents
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-300 mb-6">
+                    Securely store and manage your educational credentials on
+                    the blockchain with easy wallet connection.
+                  </p>
+                </div>
                 <Link href="/connect">
-                  <Button className="w-auto mt-3">
-                    Upload
-                  </Button>
+                  <Button className="w-full">Upload Documents</Button>
                 </Link>
               </div>
             </CardContent>
           </Card>
         </div>
       </main>
-      <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t">
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          © 2025 ResumeOnRails. All rights reserved.
-        </p>
-        <nav className="sm:ml-auto flex gap-4 sm:gap-6">
-          <Link className="text-xs hover:underline underline-offset-4" href="#">
-            Terms of Service
-          </Link>
-          <Link className="text-xs hover:underline underline-offset-4" href="#">
-            Privacy
-          </Link>
-        </nav>
+
+      <footer className="bg-white dark:bg-gray-900 border-t dark:border-gray-700 py-6">
+        <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 md:mb-0">
+            © 2025 ResumeOnRails. All rights reserved.
+          </p>
+          <nav className="flex gap-4">
+            <Link
+              href="#"
+              className="text-sm text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              Terms of Service
+            </Link>
+            <Link
+              href="#"
+              className="text-sm text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              Privacy Policy
+            </Link>
+          </nav>
+        </div>
       </footer>
     </div>
   );

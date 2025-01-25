@@ -3,10 +3,17 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, Link } from "lucide-react";
+import {
+  Upload,
+  Link as LinkIcon,
+  UserCircle,
+  FileText,
+  Shield,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { eduChainService } from "@/lib/blockchain";
-import { create } from 'ipfs-http-client';
+import { create } from "ipfs-http-client";
+import { cn } from "@/lib/utils";
 
 export default function ConnectPage() {
   const [connected, setConnected] = useState(false);
@@ -41,25 +48,25 @@ export default function ConnectPage() {
 
     try {
       setUploading(true);
-      
+
       // Connect to IPFS
       const ipfs = create({
-        host: 'ipfs.infura.io',
+        host: "ipfs.infura.io",
         port: 5001,
-        protocol: 'https'
+        protocol: "https",
       });
 
       // Upload file to IPFS
       const file = await selectedFile.arrayBuffer();
       const result = await ipfs.add(file);
-      
+
       // Update document on eduChain
       await eduChainService.updateDocument(
-        userData.id,  
+        userData.id,
         result.path,
         institution
       );
-      
+
       setUploading(false);
       // Show success message
     } catch (error) {
@@ -69,63 +76,112 @@ export default function ConnectPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-6">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-6">
+      <div className="w-full max-w-md space-y-6">
         {!connected ? (
-          <Card className="text-center p-8">
-            <CardHeader>
-              <CardTitle className="text-3xl">Connect with eduChain</CardTitle>
+          <Card className="shadow-2xl">
+            <CardHeader className="text-center pb-4 border-b dark:border-gray-700">
+              <div className="flex justify-center mb-4">
+                <Shield className="w-16 h-16 text-blue-600" />
+              </div>
+              <CardTitle className="text-3xl font-bold text-gray-900 dark:text-white">
+                Connect with eduChain
+              </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6 text-center">
               <p className="mb-6 text-gray-600 dark:text-gray-300">
-                Connect your wallet to manage your documents securely on eduChain
+                Securely connect your wallet to manage your educational
+                documents
               </p>
-              <Button onClick={handleConnect} size="lg">
-                <Link className="mr-2 h-5 w-5" />
+              <Button
+                onClick={handleConnect}
+                size="lg"
+                className="w-full group"
+              >
+                <LinkIcon className="mr-2 h-5 w-5 group-hover:rotate-45 transition-transform" />
                 Connect Wallet
               </Button>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
+            <Card className="shadow-xl">
+              <CardHeader className="flex flex-row items-center space-x-4 border-b dark:border-gray-700 pb-4">
+                <UserCircle className="w-12 h-12 text-blue-600" />
+                <div>
+                  <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+                    Profile Information
+                  </CardTitle>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Your verified educational identity
+                  </p>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium">Name</label>
-                    <p className="text-lg">{userData?.name}</p>
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                      Name
+                    </label>
+                    <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {userData?.name}
+                    </p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium">eduID</label>
-                    <p className="text-lg">{userData?.id}</p>
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                      eduID
+                    </label>
+                    <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {userData?.id}
+                    </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Upload Document</CardTitle>
+            <Card className="shadow-xl">
+              <CardHeader className="flex flex-row items-center space-x-4 border-b dark:border-gray-700 pb-4">
+                <FileText className="w-12 h-12 text-green-600" />
+                <div>
+                  <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+                    Upload Document
+                  </CardTitle>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Add your educational certificates
+                  </p>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <div className="space-y-4">
-                  <Input
-                    placeholder="Institution Name"
-                    value={institution}
-                    onChange={(e) => setInstitution(e.target.value)}
-                  />
-                  <Input
-                    type="file"
-                    accept="application/pdf"
-                    onChange={handleFileUpload}
-                  />
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2 block">
+                      Institution Name
+                    </label>
+                    <Input
+                      placeholder="Enter institution name"
+                      value={institution}
+                      onChange={(e) => setInstitution(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2 block">
+                      Document Upload
+                    </label>
+                    <Input
+                      type="file"
+                      accept="application/pdf"
+                      onChange={handleFileUpload}
+                      className="w-full file:mr-4 file:rounded-full file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-medium hover:file:bg-blue-100"
+                    />
+                  </div>
                   <Button
                     onClick={uploadToIPFS}
                     disabled={!selectedFile || !institution || uploading}
-                    className="w-full"
+                    className={cn(
+                      "w-full mt-4",
+                      uploading && "opacity-50 cursor-not-allowed"
+                    )}
                   >
                     <Upload className="mr-2 h-4 w-4" />
                     {uploading ? "Uploading..." : "Upload to IPFS"}

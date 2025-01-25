@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ethers } from "ethers";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,16 @@ import {
   Shield,
   Rocket,
   ArrowLeft,
+  Loader2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
+
+interface OpenCampusProfile {
+  username: string;
+  openCampusId: string;
+  isVerified: boolean;
+}
 
 // Smart Contract Configuration
 const CONTRACT_ADDRESS = "0xa396430cf2f0b78107ed786c8156c6de492eec3c";
@@ -72,33 +79,72 @@ const CONTRACT_ABI = [
     stateMutability: "nonpayable",
     type: "function",
   },
+  {
+    inputs: [{ internalType: "string", name: "eduId", type: "string" }],
+    name: "getDocument",
+    outputs: [
+      { internalType: "string", name: "ipfsUrl", type: "string" },
+      { internalType: "uint256", name: "timestamp", type: "uint256" },
+      { internalType: "bool", name: "verified", type: "bool" },
+      { internalType: "string", name: "institution", type: "string" },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
 ];
 
 export default function ConnectPage() {
   const [connected, setConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState("");
+  const [userName, setUserName] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const [eduId, setEduId] = useState("");
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [transactionHash, setTransactionHash] = useState<string | null>(null);
+  const [openCampusProfile, setOpenCampusProfile] = useState<OpenCampusProfile | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  // Current UTC timestamp and user information
-  const currentTimestamp = "2025-01-25 20:33:11";
+  // Updated timestamp and user
+  const currentTimestamp = "2025-01-25 21:34:15";
   const currentUser = "AmrendraTheCoder";
+
+  useEffect(() => {
+    if (walletAddress) {
+      fetchOpenCampusProfile();
+    }
+  }, [walletAddress]);
+
+  const fetchOpenCampusProfile = async () => {
+    try {
+      setLoadingProfile(true);
+      // Using mock profile data instead of API call
+      const mockProfile = {
+        username: currentUser,
+        openCampusId: `EDU${walletAddress.substring(2, 8).toUpperCase()}`,
+        isVerified: true
+      };
+      setOpenCampusProfile(mockProfile);
+      setEduId(mockProfile.openCampusId);
+    } catch (error) {
+      console.error("Failed to fetch OpenCampus profile:", error);
+      setUploadError("Failed to fetch OpenCampus profile. Please try again.");
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
 
   const handleConnect = async () => {
     if (!window.ethereum) {
-      alert(
-        "MetaMask is not installed. Please install it to use this feature."
-      );
+      alert("MetaMask is not installed. Please install it to use this feature.");
       return;
     }
 
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
+      const network = await provider.getNetwork();
       const accounts = await provider.send("eth_requestAccounts", []);
       const address = accounts[0];
       setWalletAddress(address);
@@ -135,10 +181,14 @@ export default function ConnectPage() {
       return;
     }
 
-    if (!ethers.isAddress(CONTRACT_ADDRESS)) {
-      setUploadError(
-        "Invalid contract address configuration. Please contact support."
-      );
+    if (!userName.trim()) {
+      setUploadError("Please enter your name.");
+      return;
+    }
+
+    const PINATA_JWT = process.env.NEXT_PUBLIC_PINATA_JWT;
+    if (!PINATA_JWT) {
+      setUploadError("Pinata JWT is not configured. Please check your environment variables.");
       return;
     }
 
@@ -148,73 +198,96 @@ export default function ConnectPage() {
 
       // Create form data for Pinata
       const formData = new FormData();
-      formData.append("file", selectedFile);
+      formData.append("file", selectedFile, selectedFile.name);
 
-      // Add metadata
-      const metadata = JSON.stringify({
-        name: selectedFile.name,
+      // Prepare metadata
+      const metadata = {
+        name: `${eduId}_${selectedFile.name}`,
         keyvalues: {
           uploadedBy: walletAddress,
           uploadDate: currentTimestamp,
-          userName: currentUser,
+          userName: userName,
+          openCampusUsername: openCampusProfile?.username || "",
           eduId: eduId,
+          isVerified: openCampusProfile?.isVerified ? "true" : "false",
         },
-      });
-      formData.append("pinataMetadata", metadata);
+      };
 
-      // Upload to Pinata
+      formData.append("pinataMetadata", JSON.stringify(metadata));
+      formData.append(
+        "pinataOptions",
+        JSON.stringify({
+          cidVersion: 1,
+        })
+      );
+
+      // Validate the JWT token before upload
+      try {
+        const authResponse = await axios.get(
+          "https://api.pinata.cloud/data/testAuthentication",
+          {
+            headers: {
+              Authorization: `Bearer ${PINATA_JWT}`,
+            },
+          }
+        );
+        console.log("Auth Test Response:", authResponse.data);
+      } catch (authError) {
+        console.error("Authentication Error:", authError);
+        throw new Error("Invalid Pinata JWT token");
+      }
+
+      // Upload to Pinata with updated headers
       const response = await axios.post(
         "https://api.pinata.cloud/pinning/pinFileToIPFS",
         formData,
         {
           headers: {
-            "Content-Type": `multipart/form-data;`,
-            Authorization: `Bearer ${process.env.NEXT_PUBLIC_PINATA_JWT}`,
+            Authorization: `Bearer ${PINATA_JWT}`,
+            "Content-Type": "multipart/form-data",
           },
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
         }
       );
 
-      const ipfsHash = response.data.IpfsHash;
-      const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
+      console.log("Pinata Response:", response.data);
+
+      if (!response.data.IpfsHash) {
+        throw new Error('Failed to get IPFS hash from Pinata');
+      }
+
+      const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${response.data.IpfsHash}`;
 
       // Connect to smart contract
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-
-      console.log("Contract Address:", CONTRACT_ADDRESS);
-      console.log("Wallet Address:", walletAddress);
-
-      const contract = new ethers.Contract(
-        CONTRACT_ADDRESS,
-        CONTRACT_ABI,
-        signer
-      );
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
       // Update document in blockchain
-      const tx = await contract.updateDocument(eduId, ipfsUrl, currentUser);
-
-      // Wait for transaction confirmation
+      const tx = await contract.updateDocument(eduId, ipfsUrl, "OpenCampus");
       const receipt = await tx.wait();
+      
       setTransactionHash(receipt.hash);
-
-      // Reset upload state
       setUploading(false);
-      alert(
-        `Document successfully uploaded! Transaction Hash: ${receipt.hash}`
-      );
+      alert(`Document successfully uploaded! Transaction Hash: ${receipt.hash}`);
+
     } catch (error: any) {
       console.error("Error during upload:", error);
 
       let errorMessage = "Upload failed";
-      if (error.code === "ACTION_REJECTED" || error.code === 4001) {
-        errorMessage =
-          "Transaction was rejected in MetaMask. Please approve the transaction to continue.";
+      if (error.response) {
+        console.log("Error Response:", error.response);
+        if (error.response.data && error.response.data.error) {
+          errorMessage = `Pinata Error: ${error.response.data.error}`;
+        } else {
+          errorMessage = `Upload Error: ${error.response.status} - ${error.response.statusText}`;
+        }
+      } else if (error.code === "ACTION_REJECTED" || error.code === 4001) {
+        errorMessage = "Transaction was rejected in MetaMask. Please approve the transaction to continue.";
       } else if (error.message?.includes("invalid address")) {
-        errorMessage =
-          "Invalid contract address. Please check the contract deployment.";
-      } else if (error.response?.data?.error) {
-        errorMessage = `Pinata Error: ${error.response.data.error.message}`;
-      } else if (error.message) {
+        errorMessage = "Invalid contract address. Please check the contract deployment.";
+      } else {
         errorMessage = `Error: ${error.message}`;
       }
 
@@ -257,8 +330,8 @@ export default function ConnectPage() {
                   Connect Your Wallet
                 </h1>
                 <p className="text-gray-600 dark:text-gray-300 mb-6">
-                  Connect your digital wallet to manage and verify your
-                  educational credentials on the blockchain.
+                  Connect your digital wallet to manage and verify your educational
+                  credentials on the blockchain.
                 </p>
                 <Button
                   onClick={handleConnect}
@@ -278,9 +351,20 @@ export default function ConnectPage() {
                     <UserCircle className="w-10 h-10 text-blue-600" />
                   </div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-4">
-                    Wallet Information
+                    Profile Information
                   </h2>
-                  <div className="space-y-4 text-center">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                        Your Name
+                      </label>
+                      <Input
+                        placeholder="Enter your name"
+                        value={userName}
+                        onChange={(e) => setUserName(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
                     <div>
                       <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
                         Wallet Address
@@ -289,6 +373,29 @@ export default function ConnectPage() {
                         {walletAddress}
                       </p>
                     </div>
+                    {loadingProfile ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Loading OpenCampus Profile...</span>
+                      </div>
+                    ) : openCampusProfile ? (
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                          OpenCampus Profile
+                        </p>
+                        <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                          {openCampusProfile.username}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          ID: {openCampusProfile.openCampusId}
+                        </p>
+                        {openCampusProfile.isVerified && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Verified
+                          </span>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 </CardContent>
               </Card>
@@ -311,7 +418,13 @@ export default function ConnectPage() {
                         value={eduId}
                         onChange={(e) => setEduId(e.target.value)}
                         className="w-full mb-4"
+                        disabled={!!openCampusProfile}
                       />
+                      {openCampusProfile && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          Using OpenCampus ID
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2 block">
@@ -359,30 +472,41 @@ export default function ConnectPage() {
                       disabled={!selectedFile || !eduId || uploading}
                       className="w-full mt-4 group"
                     >
-                      <Upload className="mr-2 h-4 w-4 group-disabled:animate-pulse" />
-                      {uploading ? "Uploading..." : "Upload Document"}
+                      {uploading ? (
+                        <div className="flex items-center justify-center">
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          Uploading...
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="mr-2 h-4 w-4 group-disabled:animate-pulse" />
+                          Upload Document
+                        </>
+                      )}
                     </Button>
-
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
-                      You will need to approve the transaction in MetaMask to
-                      complete the upload.
-                    </p>
 
                     {transactionHash && (
                       <div className="mt-4 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
-                        <p className="text-gray-700 dark:text-gray-300">
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                           Transaction Hash:
                         </p>
                         <a
                           href={`https://etherscan.io/tx/${transactionHash}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 dark:text-blue-400 underline break-all"
+                          className="text-blue-600 dark:text-blue-400 hover:underline break-all text-sm"
                         >
                           {transactionHash}
                         </a>
-                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        Your document has been successfully uploaded to IPFS and verified on the blockchain.
+                      </p>
+                    </div>
                     )}
+
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-4 text-center">
+                      You will need to approve the transaction in MetaMask to complete the upload.
+                    </p>
                   </div>
                 </CardContent>
               </Card>

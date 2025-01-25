@@ -1,18 +1,13 @@
 {
   "abi": [
     {
-      "inputs": [],
-      "stateMutability": "nonpayable",
-      "type": "constructor"
-    },
-    {
       "anonymous": false,
       "inputs": [
         {
           "indexed": true,
-          "internalType": "string",
-          "name": "eduId",
-          "type": "string"
+          "internalType": "address",
+          "name": "uploader",
+          "type": "address"
         },
         {
           "indexed": false,
@@ -22,39 +17,20 @@
         },
         {
           "indexed": false,
-          "internalType": "string",
-          "name": "institution",
-          "type": "string"
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
         }
       ],
       "name": "DocumentUpdated",
       "type": "event"
     },
     {
-      "anonymous": false,
       "inputs": [
         {
-          "indexed": true,
-          "internalType": "string",
-          "name": "eduId",
-          "type": "string"
-        },
-        {
-          "indexed": false,
-          "internalType": "string",
-          "name": "institution",
-          "type": "string"
-        }
-      ],
-      "name": "DocumentVerified",
-      "type": "event"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "eduId",
-          "type": "string"
+          "internalType": "address",
+          "name": "walletAddress",
+          "type": "address"
         }
       ],
       "name": "getDocument",
@@ -70,27 +46,9 @@
           "type": "uint256"
         },
         {
-          "internalType": "bool",
-          "name": "verified",
-          "type": "bool"
-        },
-        {
           "internalType": "string",
-          "name": "institution",
+          "name": "metadata",
           "type": "string"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "owner",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
         }
       ],
       "stateMutability": "view",
@@ -98,11 +56,6 @@
     },
     {
       "inputs": [
-        {
-          "internalType": "string",
-          "name": "eduId",
-          "type": "string"
-        },
         {
           "internalType": "string",
           "name": "ipfsUrl",
@@ -110,24 +63,11 @@
         },
         {
           "internalType": "string",
-          "name": "institution",
+          "name": "metadata",
           "type": "string"
         }
       ],
       "name": "updateDocument",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "string",
-          "name": "eduId",
-          "type": "string"
-        }
-      ],
-      "name": "verifyDocument",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   FileText,
@@ -8,8 +8,6 @@ import {
   CheckCircle2,
   Clock,
   Rocket,
-  Upload,
-  FileIcon,
   Download,
   AlertCircle,
 } from "lucide-react";
@@ -17,69 +15,267 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ethers, Contract, BrowserProvider } from "ethers";
+import { Contract, BrowserProvider } from "ethers";
 
-// OpenCampus Contract Configuration
+// eduChain Contract Configuration
 const CONTRACT_ADDRESS = "0xa396430cf2f0b78107ed786c8156c6de492eec3c";
 const CONTRACT_ABI = [
   {
-    inputs: [{ internalType: "string", name: "eid", type: "string" }],
-    name: "getProfile",
+    inputs: [],
+    stateMutability: "nonpayable",
+    type: "constructor",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "string",
+        name: "eduId",
+        type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "ipfsUrl",
+        type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "institution",
+        type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "address",
+        name: "uploader",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "userName",
+        type: "string",
+      },
+    ],
+    name: "DocumentUpdated",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "string",
+        name: "eduId",
+        type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "institution",
+        type: "string",
+      },
+    ],
+    name: "DocumentVerified",
+    type: "event",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "eduId",
+        type: "string",
+      },
+    ],
+    name: "getExtendedDocument",
     outputs: [
-      { internalType: "string", name: "ipfsHash", type: "string" },
-      { internalType: "uint256", name: "timestamp", type: "uint256" },
-      { internalType: "bool", name: "verified", type: "bool" },
-      { internalType: "string", name: "transactionHash", type: "string" }
+      {
+        internalType: "string",
+        name: "ipfsUrl",
+        type: "string",
+      },
+      {
+        internalType: "uint256",
+        name: "timestamp",
+        type: "uint256",
+      },
+      {
+        internalType: "bool",
+        name: "verified",
+        type: "bool",
+      },
+      {
+        internalType: "string",
+        name: "institution",
+        type: "string",
+      },
+      {
+        internalType: "address",
+        name: "uploader",
+        type: "address",
+      },
+      {
+        internalType: "string",
+        name: "userName",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "metadata",
+        type: "string",
+      },
     ],
     stateMutability: "view",
     type: "function",
-  }
+  },
+  {
+    inputs: [],
+    name: "owner",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "eduId",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "ipfsUrl",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "institution",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "userName",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "metadata",
+        type: "string",
+      },
+    ],
+    name: "updateDocument",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "eduId",
+        type: "string",
+      },
+    ],
+    name: "verifyDocument",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
 ];
 
-interface ProfileResult {
-  ipfsHash: string;
+interface DocumentResult {
+  ipfsUrl: string;
   timestamp: Date;
   verified: boolean;
-  transactionHash: string;
+  institution: string;
+  uploader: string;
+  userName: string;
+  metadata: string;
   documentUrl?: string;
+}
+
+interface WindowWithEthereum extends Window {
+  ethereum?: any;
 }
 
 export default function SearchPage() {
   const [eid, setEid] = useState<string>("");
-  const [searchResult, setSearchResult] = useState<ProfileResult | null>(null);
+  const [searchResult, setSearchResult] = useState<DocumentResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [provider, setProvider] = useState<any>(null);
   const [signer, setSigner] = useState<any>(null);
+  const [connected, setConnected] = useState<boolean>(false);
 
   // Updated timestamp and user
-  const currentTimestamp = "2025-01-25 22:02:46";
+  const currentTimestamp = "2025-01-25 22:41:14";
   const currentUser = "AmrendraTheCoder";
 
   const initializeProvider = async () => {
     try {
-      if (typeof window !== "undefined" && window.ethereum) {
-        const provider = new BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        setProvider(provider);
+      if (
+        typeof window !== "undefined" &&
+        (window as WindowWithEthereum).ethereum
+      ) {
+        const web3Provider = new BrowserProvider(
+          (window as WindowWithEthereum).ethereum
+        );
+
+        // Request account access
+        await (window as WindowWithEthereum).ethereum.request({
+          method: "eth_requestAccounts",
+        });
+
+        const signer = await web3Provider.getSigner();
+        const network = await web3Provider.getNetwork();
+
+        console.log("Connected to network:", network.chainId.toString());
+        console.log("Signer address:", await signer.getAddress());
+
+        setProvider(web3Provider);
         setSigner(signer);
+        setConnected(true);
+        return { provider: web3Provider, signer };
+      } else {
+        throw new Error("Please install MetaMask to use this feature");
       }
     } catch (error) {
       console.error("Error initializing provider:", error);
-      setError(
-        "Failed to connect to wallet. Please make sure MetaMask is installed and connected."
-      );
+      setConnected(false);
+      throw error;
     }
   };
 
   useEffect(() => {
-    initializeProvider();
+    initializeProvider().catch((error) => {
+      console.error("Failed to initialize provider:", error);
+      setError(
+        "Failed to connect to wallet. Please make sure MetaMask is installed and connected."
+      );
+    });
   }, []);
 
   const handleSearch = async () => {
     if (!eid) {
-      setError("Please enter an OpenCampus Profile ID");
+      setError("Please enter an Education ID");
       return;
+    }
+
+    if (!connected) {
+      try {
+        await initializeProvider();
+      } catch (error) {
+        setError("Please connect your wallet to continue");
+        return;
+      }
     }
 
     setLoading(true);
@@ -87,44 +283,72 @@ export default function SearchPage() {
     setSearchResult(null);
 
     try {
-      if (!signer) {
-        await initializeProvider();
-        if (!signer) {
-          throw new Error("Please connect your wallet to continue");
+      let currentSigner = signer;
+
+      if (!currentSigner) {
+        const { signer: newSigner } = await initializeProvider();
+        currentSigner = newSigner;
+      }
+
+      const contract = new Contract(
+        CONTRACT_ADDRESS,
+        CONTRACT_ABI,
+        currentSigner
+      );
+
+      console.log("Contract address:", CONTRACT_ADDRESS);
+      console.log("Searching for Education ID:", eid);
+
+      try {
+        // Use getExtendedDocument instead of getDocument
+        const result = await contract.getExtendedDocument(eid);
+        console.log("Raw contract result:", result);
+
+        // Check if we got valid data
+        if (!result || !result[0]) {
+          throw new Error("No document found for this ID");
+        }
+
+        // Format the result with extended fields
+        const formattedResult: DocumentResult = {
+          ipfsUrl: result[0],
+          timestamp: new Date(Number(result[1]) * 1000),
+          verified: Boolean(result[2]),
+          institution: result[3],
+          uploader: result[4],
+          userName: result[5],
+          metadata: result[6],
+          documentUrl: result[0]
+            ? `https://gateway.pinata.cloud/ipfs/${result[0].replace(
+                "https://gateway.pinata.cloud/ipfs/",
+                ""
+              )}`
+            : undefined,
+        };
+
+        console.log("Formatted result:", formattedResult);
+        setSearchResult(formattedResult);
+      } catch (contractError: any) {
+        console.error("Contract call error:", contractError);
+
+        if (
+          contractError.code === "BAD_DATA" ||
+          contractError.message.includes("BAD_DATA")
+        ) {
+          setError("Document not found or invalid ID format");
+        } else if (contractError.message.includes("user rejected")) {
+          setError("Transaction was rejected. Please try again.");
+        } else if (contractError.message.includes("network")) {
+          setError("Please make sure you're connected to the correct network");
+        } else if (contractError.message.includes("not found")) {
+          setError("Document not found. Please check the ID and try again.");
+        } else {
+          setError(contractError.message || "Failed to fetch document data");
         }
       }
-
-      const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-
-      console.log("Searching for Profile ID:", eid);
-
-      const result = await contract.getProfile(eid);
-      console.log("Raw contract result:", result);
-
-      if (!result || !result[0]) {
-        throw new Error("No profile found for this ID");
-      }
-
-      // Format the result
-      const formattedResult: ProfileResult = {
-        ipfsHash: result[0],
-        timestamp: new Date(Number(result[1]) * 1000),
-        verified: Boolean(result[2]),
-        transactionHash: result[3],
-        documentUrl: `https://gateway.pinata.cloud/ipfs/${result[0]}`,
-      };
-
-      console.log("Formatted result:", formattedResult);
-      setSearchResult(formattedResult);
     } catch (error: any) {
-      console.error("Error searching profile:", error);
-      if (error.message.includes("BAD_DATA")) {
-        setError("Invalid Profile ID or profile not found");
-      } else if (error.message.includes("user rejected")) {
-        setError("Transaction rejected. Please try again.");
-      } else {
-        setError(error.message || "An error occurred while searching");
-      }
+      console.error("Error searching document:", error);
+      setError(error.message || "An error occurred while searching");
     } finally {
       setLoading(false);
     }
@@ -137,10 +361,23 @@ export default function SearchPage() {
         <div className="container mx-auto flex h-16 items-center px-4 md:px-6 justify-between">
           <div className="flex items-center space-x-2 font-bold text-xl text-gray-900 dark:text-white">
             <ShieldCheck className="w-8 h-8 text-blue-600" />
-            OpenCampus Profile Verification
+            eduChain Document Verification
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-300">
-            {currentUser} • {currentTimestamp} UTC
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-600 dark:text-gray-300">
+              {currentUser} • {currentTimestamp} UTC
+            </div>
+            {!connected && (
+              <Button
+                onClick={() => initializeProvider()}
+                size="sm"
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Rocket className="w-4 h-4" />
+                Connect Wallet
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -154,45 +391,60 @@ export default function SearchPage() {
                 <Search className="w-10 h-10 text-blue-600" />
               </div>
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white text-center mb-4">
-                Profile Verification
+                Document Verification Portal
               </h1>
               <p className="text-gray-600 dark:text-gray-300 text-center mb-6">
-                Enter your OpenCampus Profile ID to verify your credentials
+                {connected
+                  ? "Enter your Education ID to verify your credentials"
+                  : "Connect your wallet to verify educational documents"}
               </p>
 
               <div className="space-y-4">
-                <div>
-                  <Input
-                    placeholder="Enter Profile ID..."
-                    value={eid}
-                    onChange={(e) => setEid(e.target.value)}
-                    className="w-full"
-                  />
-                  {error && (
-                    <div className="mt-2 flex items-center gap-2 text-red-500 text-sm">
-                      <AlertCircle className="w-4 h-4" />
-                      {error}
+                {connected ? (
+                  <>
+                    <div>
+                      <Input
+                        placeholder="Enter Education ID..."
+                        value={eid}
+                        onChange={(e) => setEid(e.target.value)}
+                        className="w-full"
+                      />
+                      {error && (
+                        <div className="mt-2 flex items-center gap-2 text-red-500 text-sm">
+                          <AlertCircle className="w-4 h-4" />
+                          {error}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <Button
-                  onClick={handleSearch}
-                  disabled={loading || !eid}
-                  size="lg"
-                  className="w-full group"
-                >
-                  {loading ? (
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                      Searching...
-                    </div>
-                  ) : (
-                    <>
-                      <Search className="mr-2 h-5 w-5" />
-                      Verify Profile
-                    </>
-                  )}
-                </Button>
+                    <Button
+                      onClick={handleSearch}
+                      disabled={loading || !eid}
+                      size="lg"
+                      className="w-full group"
+                    >
+                      {loading ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                          Verifying Document...
+                        </div>
+                      ) : (
+                        <>
+                          <Search className="mr-2 h-5 w-5" />
+                          Verify Document
+                        </>
+                      )}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    onClick={() => initializeProvider()}
+                    size="lg"
+                    className="w-full flex items-center justify-center gap-2"
+                  >
+                    <Rocket className="w-5 h-5" />
+                    Connect Wallet to Continue
+                  </Button>
+                )}
               </div>
 
               {searchResult && (
@@ -203,14 +455,14 @@ export default function SearchPage() {
                       <div className="flex items-center justify-center">
                         <Badge
                           variant={
-                            searchResult.verified ? "default" : "destructive"
+                            searchResult.verified ? "success" : "warning"
                           }
                           className="text-lg px-4 py-2"
                         >
                           {searchResult.verified ? (
                             <div className="flex items-center gap-2">
                               <CheckCircle2 className="w-5 h-5" />
-                              Verified Profile
+                              Verified Document
                             </div>
                           ) : (
                             <div className="flex items-center gap-2">
@@ -221,11 +473,11 @@ export default function SearchPage() {
                         </Badge>
                       </div>
 
-                      {/* Profile Details */}
-                      <div className="grid gap-4">
+                      {/* Document Details */}
+                      <div className="grid gap-4 md:grid-cols-2">
                         <div>
                           <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                            Profile ID
+                            Education ID
                           </label>
                           <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
                             {eid}
@@ -234,72 +486,130 @@ export default function SearchPage() {
 
                         <div>
                           <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                            Verification Time
+                            Institution
                           </label>
                           <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
-                            {searchResult.timestamp.toLocaleString()}
+                            {searchResult.institution}
                           </p>
                         </div>
 
                         <div>
                           <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                            IPFS Hash
+                            Upload Time
                           </label>
-                          <p className="mt-1 text-sm font-mono bg-gray-100 dark:bg-gray-700 p-2 rounded break-all">
-                            {searchResult.ipfsHash}
+                          <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
+                            {searchResult.timestamp.toLocaleString()} UTC
                           </p>
                         </div>
 
                         <div>
                           <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                            Transaction Hash
+                            Uploaded By
                           </label>
-                          <p className="mt-1 text-sm font-mono bg-gray-100 dark:bg-gray-700 p-2 rounded break-all">
-                            {searchResult.transactionHash}
+                          <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
+                            {searchResult.userName}
                           </p>
                         </div>
+
+                        <div className="md:col-span-2">
+                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            Uploader Address
+                          </label>
+                          <div className="mt-1 flex items-center gap-2">
+                            <p className="text-sm font-mono bg-gray-100 dark:bg-gray-700 p-2 rounded break-all">
+                              {searchResult.uploader}
+                            </p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                navigator.clipboard.writeText(
+                                  searchResult.uploader
+                                );
+                              }}
+                              className="shrink-0"
+                            >
+                              Copy
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            IPFS URL
+                          </label>
+                          <div className="mt-1 flex items-center gap-2">
+                            <p className="text-sm font-mono bg-gray-100 dark:bg-gray-700 p-2 rounded break-all flex-1">
+                              {searchResult.ipfsUrl}
+                            </p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                navigator.clipboard.writeText(
+                                  searchResult.ipfsUrl
+                                );
+                              }}
+                              className="shrink-0"
+                            >
+                              Copy
+                            </Button>
+                          </div>
+                        </div>
+
+                        {searchResult.metadata && (
+                          <div className="md:col-span-2">
+                            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                              Additional Information
+                            </label>
+                            <p className="mt-1 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 p-3 rounded">
+                              {searchResult.metadata}
+                            </p>
+                          </div>
+                        )}
                       </div>
 
                       {/* Document Preview */}
-                      <div className="mt-6 space-y-4">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                          Document Preview
-                        </h3>
-                        <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
-                          <div className="aspect-[3/4] w-full max-w-md mx-auto bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
-                            {searchResult.documentUrl && (
+                      {searchResult.documentUrl && (
+                        <div className="mt-6 space-y-4">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            Document Preview
+                          </h3>
+                          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
+                            <div className="aspect-[3/4] w-full max-w-md mx-auto bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
                               <iframe
                                 src={searchResult.documentUrl}
                                 className="w-full h-full"
                                 title="Document Preview"
+                                sandbox="allow-same-origin allow-scripts"
                               />
-                            )}
+                            </div>
+                          </div>
+                          <div className="flex gap-4 justify-center">
+                            <Button
+                              onClick={() =>
+                                window.open(searchResult.documentUrl)
+                              }
+                              className="flex items-center gap-2"
+                            >
+                              <FileText className="w-4 h-4" />
+                              View Full Document
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() =>
+                                window.open(
+                                  `${searchResult.documentUrl}?download=true`
+                                )
+                              }
+                              className="flex items-center gap-2"
+                            >
+                              <Download className="w-4 h-4" />
+                              Download
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex gap-4 justify-center">
-                          <Button
-                            onClick={() =>
-                              window.open(searchResult.documentUrl)
-                            }
-                            className="flex items-center gap-2"
-                          >
-                            <FileText className="w-4 h-4" />
-                            View Full Document
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() =>
-                              window.open(
-                                `${searchResult.documentUrl}?download=true`
-                              )
-                            }
-                            className="flex items-center gap-2"
-                          >
-                            <Download className="w-4 h-4" />
-                            Download
-                          </Button>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -313,7 +623,7 @@ export default function SearchPage() {
       <footer className="bg-white dark:bg-gray-900 border-t">
         <div className="container mx-auto px-4 py-6">
           <p className="text-center text-sm text-gray-500">
-            © 2025 OpenCampus. All rights reserved.
+            © 2025 eduChain. All rights reserved.
           </p>
         </div>
       </footer>

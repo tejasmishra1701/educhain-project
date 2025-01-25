@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { ethers } from "ethers";
-import { PinataSDK } from "pinata-web3";
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 
 // Smart Contract Configuration
-const CONTRACT_ADDRESS = "0xa396430cf2f0b78107ed786c8156c6de492eec3c"; // Replace with actual contract address
+const CONTRACT_ADDRESS = "0xa396430cf2f0b78107ed786c8156c6de492eec3c";
 const CONTRACT_ABI = [
   {
     inputs: [],
@@ -86,7 +86,7 @@ export default function ConnectPage() {
   const router = useRouter();
 
   // Current UTC timestamp and user information
-  const currentTimestamp = "2025-01-25 19:34:48";
+  const currentTimestamp = "2025-01-25 20:33:11";
   const currentUser = "AmrendraTheCoder";
 
   const handleConnect = async () => {
@@ -146,14 +146,12 @@ export default function ConnectPage() {
       setUploading(true);
       setUploadError(null);
 
-      // Initialize PinataSDK
-      const pinata = new PinataSDK({
-        pinataJwt: process.env.NEXT_PUBLIC_PINATA_JWT!,
-        pinataGateway: "gateway.pinata.cloud",
-      });
+      // Create form data for Pinata
+      const formData = new FormData();
+      formData.append("file", selectedFile);
 
-      // Create metadata
-      const metadata = {
+      // Add metadata
+      const metadata = JSON.stringify({
         name: selectedFile.name,
         keyvalues: {
           uploadedBy: walletAddress,
@@ -161,11 +159,23 @@ export default function ConnectPage() {
           userName: currentUser,
           eduId: eduId,
         },
-      };
+      });
+      formData.append("pinataMetadata", metadata);
 
-      // Upload file to IPFS
-      const result = await pinata.upload.file(selectedFile, { metadata });
-      const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`;
+      // Upload to Pinata
+      const response = await axios.post(
+        "https://api.pinata.cloud/pinning/pinFileToIPFS",
+        formData,
+        {
+          headers: {
+            "Content-Type": `multipart/form-data;`,
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_PINATA_JWT}`,
+          },
+        }
+      );
+
+      const ipfsHash = response.data.IpfsHash;
+      const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
 
       // Connect to smart contract
       const provider = new ethers.BrowserProvider(window.ethereum);
@@ -181,11 +191,7 @@ export default function ConnectPage() {
       );
 
       // Update document in blockchain
-      const tx = await contract.updateDocument(
-        eduId,
-        ipfsUrl,
-        currentUser // Using currentUser as institution
-      );
+      const tx = await contract.updateDocument(eduId, ipfsUrl, currentUser);
 
       // Wait for transaction confirmation
       const receipt = await tx.wait();
@@ -206,6 +212,8 @@ export default function ConnectPage() {
       } else if (error.message?.includes("invalid address")) {
         errorMessage =
           "Invalid contract address. Please check the contract deployment.";
+      } else if (error.response?.data?.error) {
+        errorMessage = `Pinata Error: ${error.response.data.error.message}`;
       } else if (error.message) {
         errorMessage = `Error: ${error.message}`;
       }

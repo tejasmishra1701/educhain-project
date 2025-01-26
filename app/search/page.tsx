@@ -377,13 +377,13 @@ export default function SearchPage() {
                         </label>
                         <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 h-[40rem]">
                           <div className="w-full h-full mx-auto bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
-                            <embed
+                            <iframe
                               src={`https://drive.google.com/viewerng/
 viewer?embedded=true&url=${searchResult.documentUrl}`}
                               // src={searchResult.documentUrl}
                               className="w-full h-full"
                               title="Document Preview"
-                              sandbox="allow-cross-origin allow-scripts"
+                              sandbox="allow-scripts"
                             />
                           </div>
                         </div>

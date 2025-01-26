@@ -17,12 +17,37 @@ import {
 import { useRouter } from "next/navigation";
 
 // Current timestamp and user
-const currentTimestamp = "2025-01-25 23:53:01";
-const currentUser = "AmrendraTheCoder";
+const CURRENT_TIMESTAMP = "2025-01-26 00:35:37";
+const CURRENT_USER = "AmrendraTheCoder";
 
 // Smart Contract Configuration
 const CONTRACT_ADDRESS = "0xa396430cf2f0b78107ed786c8156c6de492eec3c";
 const CONTRACT_ABI = [
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "uploader",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "ipfsUrl",
+        type: "string",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "timestamp",
+        type: "uint256",
+      },
+    ],
+    name: "DocumentUpdated",
+    type: "event",
+  },
   {
     inputs: [
       {
@@ -72,6 +97,12 @@ const CONTRACT_ABI = [
   },
 ];
 
+interface DocumentEvent {
+  uploader: string;
+  ipfsUrl: string;
+  timestamp: bigint;
+}
+
 export default function ConnectPage() {
   const [connected, setConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState("");
@@ -84,38 +115,57 @@ export default function ConnectPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (walletAddress) {
-      setupContractListeners();
-    }
-  }, [walletAddress]);
+    const setupContractListeners = async () => {
+      if (!walletAddress) return;
 
-  const setupContractListeners = async () => {
-    try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const contractInstance = new ethers.Contract(
-        CONTRACT_ADDRESS,
-        CONTRACT_ABI,
-        signer
-      );
+      try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+        const contractInstance = new ethers.Contract(
+          CONTRACT_ADDRESS,
+          CONTRACT_ABI,
+          signer
+        );
 
-      contractInstance.on("DocumentUpdated", (uploader, ipfsUrl, timestamp) => {
-        console.log("Document Updated:", {
-          uploader,
-          ipfsUrl,
-          timestamp,
-        });
-      });
+        // Remove any existing listeners first
+        if (contract) {
+          contract.removeAllListeners();
+        }
 
-      setContract(contractInstance);
+        // Listen for DocumentUpdated events
+        contractInstance.on(
+          "DocumentUpdated",
+          (uploader: string, ipfsUrl: string, timestamp: bigint) => {
+            const event: DocumentEvent = {
+              uploader,
+              ipfsUrl,
+              timestamp,
+            };
+            console.log("Document Updated Event:", {
+              ...event,
+              formattedTimestamp: new Date(
+                Number(timestamp) * 1000
+              ).toISOString(),
+              currentTime: CURRENT_TIMESTAMP,
+            });
+          }
+        );
 
-      return () => {
-        contractInstance.removeAllListeners();
-      };
-    } catch (error) {
-      console.error("Error setting up contract listeners:", error);
-    }
-  };
+        setContract(contractInstance);
+      } catch (error) {
+        console.log("Error setting up contract listeners:", error);
+      }
+    };
+
+    setupContractListeners();
+
+    // Cleanup function
+    return () => {
+      if (contract) {
+        contract.removeAllListeners();
+      }
+    };
+  }, [walletAddress, contract]);
 
   const handleConnect = async () => {
     if (!window.ethereum) {
@@ -134,6 +184,15 @@ export default function ConnectPage() {
       const address = accounts[0];
       setWalletAddress(address);
       setConnected(true);
+
+      // Initialize contract after connecting
+      const signer = await provider.getSigner();
+      const contractInstance = new ethers.Contract(
+        CONTRACT_ADDRESS,
+        CONTRACT_ABI,
+        signer
+      );
+      setContract(contractInstance);
     } catch (error) {
       console.error("Error connecting to MetaMask:", error);
       alert("Failed to connect to wallet. Please try again.");
@@ -184,8 +243,8 @@ export default function ConnectPage() {
         name: `${walletAddress}_${selectedFile.name}`,
         keyvalues: {
           walletAddress: walletAddress,
-          uploadDate: currentTimestamp,
-          uploaderName: currentUser,
+          uploadDate: CURRENT_TIMESTAMP,
+          uploaderName: CURRENT_USER,
         },
       };
 
@@ -218,8 +277,8 @@ export default function ConnectPage() {
         fileName: selectedFile.name,
         fileType: selectedFile.type,
         fileSize: selectedFile.size,
-        uploadDate: currentTimestamp,
-        uploaderName: currentUser,
+        uploadDate: CURRENT_TIMESTAMP,
+        uploaderName: CURRENT_USER,
       });
 
       if (!contract) {
@@ -252,6 +311,7 @@ export default function ConnectPage() {
   const triggerFileInput = () => {
     fileInputRef.current?.click();
   };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-900 dark:to-gray-800 flex flex-col">
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b shadow-md">
@@ -264,9 +324,6 @@ export default function ConnectPage() {
             <ArrowLeft className="w-5 h-5" />
             Back
           </Button>
-          <div className="text-sm text-gray-600 dark:text-gray-300">
-            {currentUser} • {currentTimestamp} UTC
-          </div>
         </div>
       </header>
 

@@ -17,8 +17,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Contract, BrowserProvider, isAddress } from "ethers";
 
 // Contract and Chain Configuration
-const CONTRACT_ADDRESS = "0xa396430cf2f0b78107ed786c8156c6de492eec3c";
-const OPENCAMPUS_RPC_URL = "https://rpc.open-campus-codex.gelato.digital";
+const CONTRACT_ADDRESS = "0xC277D4e853968170CA36b49C2d20F9d00b538229";
+const OPENCAMPUS_RPC_URL = "https://open-campus-codex-sepolia.drpc.org";
 const CHAIN_ID = 656476;
 const CONTRACT_ABI = [
   {
@@ -73,6 +73,24 @@ const CONTRACT_ABI = [
       },
     ],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "ipfsUrl",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "metadata",
+        type: "string",
+      },
+    ],
+    name: "updateDocument",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
 ];
@@ -193,70 +211,46 @@ export default function SearchPage() {
       return;
     }
 
-    if (!connected) {
-      try {
-        await initializeProvider();
-      } catch (error) {
-        setError("Please connect your wallet to continue");
-        return;
-      }
-    }
-
     setLoading(true);
     setError("");
     setSearchResult(null);
 
-    try {
-      let currentSigner = signer;
-      if (!currentSigner) {
-        const { signer: newSigner } = await initializeProvider();
-        currentSigner = newSigner;
-      }
-
-      const contract = new Contract(
-        CONTRACT_ADDRESS,
-        CONTRACT_ABI,
-        currentSigner
-      );
-
-      try {
-        const result = await contract.getDocument(searchAddress);
-
-        if (!result || !result[0]) {
-          throw new Error("No document found for this address");
-        }
-
-        const formattedResult: DocumentResult = {
-          ipfsUrl: result[0],
-          timestamp: new Date(Number(result[1]) * 1000),
-          metadata: result[2],
-          documentUrl: result[0]
-            ? `https://gateway.pinata.cloud/ipfs/${result[0].replace(
-                "https://gateway.pinata.cloud/ipfs/",
-                ""
-              )}`
-            : undefined,
-        };
-
-        setSearchResult(formattedResult);
-      } catch (contractError: any) {
-        console.error("Contract call error:", contractError);
-        if (contractError.message.includes("Document does not exist")) {
-          setError("No document found for this address");
-        } else if (contractError.message.includes("network")) {
-          setError(
-            "Please make sure you're connected to Open Campus Codex network"
-          );
-        } else {
-          setError(contractError.message || "Failed to fetch document data");
-        }
-      }
-    } catch (error: any) {
-      console.error("Error searching document:", error);
-      setError(error.message || "An error occurred while searching");
-    } finally {
-      setLoading(false);
+    if (!provider) {
+      await initializeProvider();
     }
+
+    const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+    console.log(contract);
+    const res = await contract.getDocument(searchAddress);
+    console.log("3", res);
+    const [ipfsUrl, timestamp, metadata] = res;
+
+    if (!ipfsUrl) {
+      setError("No document found for this address");
+      return;
+    }
+
+    const documentUrl = `https://ipfs.io/ipfs/${ipfsUrl.replace(
+      "ipfs://",
+      ""
+    )}`;
+
+    setSearchResult({
+      ipfsUrl,
+      timestamp: new Date(Number(timestamp) * 1000),
+      metadata,
+      documentUrl,
+    });
+
+    setLoading(false);
+  };
+
+  const isContractRevertError = (error: any): boolean => {
+    return (
+      error.code === "CALL_EXCEPTION" ||
+      error.code === "BAD_DATA" ||
+      (error.data && error.data.startsWith("0x"))
+    );
   };
 
   return (
@@ -267,29 +261,6 @@ export default function SearchPage() {
           <div className="flex items-center space-x-2 font-bold text-xl text-gray-900 dark:text-white">
             <ShieldCheck className="w-8 h-8 text-blue-600" />
             Open Campus Document Verification
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-gray-600 dark:text-gray-300">
-              {CURRENT_USER} • {CURRENT_TIMESTAMP} UTC
-            </div>
-            {connected ? (
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                <span className="text-sm text-gray-600">
-                  Connected to Open Campus
-                </span>
-              </div>
-            ) : (
-              <Button
-                onClick={() => initializeProvider()}
-                size="sm"
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <Rocket className="w-4 h-4" />
-                Connect Wallet
-              </Button>
-            )}
           </div>
         </div>
       </header>
@@ -366,14 +337,14 @@ export default function SearchPage() {
                       <div className="mt-1">
                         <div className="flex items-center gap-2">
                           <p className="font-mono text-sm bg-gray-100 dark:bg-gray-700 p-3 rounded break-all flex-1">
-                            {searchResult.ipfsUrl}
+                            {`https://ipfs.io/ipfs/${searchResult.ipfsUrl}`}
                           </p>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => {
                               navigator.clipboard.writeText(
-                                searchResult.ipfsUrl
+                                `https://ipfs.io/ipfs/${searchResult.ipfsUrl}`
                               );
                             }}
                             className="shrink-0"
@@ -404,13 +375,15 @@ export default function SearchPage() {
                         <label className="text-sm font-medium text-gray-500 dark:text-gray-400">
                           Document Preview
                         </label>
-                        <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
-                          <div className="aspect-[3/4] w-full max-w-md mx-auto bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
-                            <iframe
-                              src={searchResult.documentUrl}
+                        <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 h-[40rem]">
+                          <div className="w-full h-full mx-auto bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
+                            <embed
+                              src={`https://drive.google.com/viewerng/
+viewer?embedded=true&url=${searchResult.documentUrl}`}
+                              // src={searchResult.documentUrl}
                               className="w-full h-full"
                               title="Document Preview"
-                              sandbox="allow-same-origin allow-scripts"
+                              sandbox="allow-cross-origin allow-scripts"
                             />
                           </div>
                         </div>
@@ -451,12 +424,6 @@ export default function SearchPage() {
       <footer className="bg-white dark:bg-gray-900 border-t">
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col items-center gap-2">
-            <p className="text-center text-sm text-gray-600 dark:text-gray-400">
-              Open Campus Document Verification Portal
-            </p>
-            <p className="text-center text-sm text-gray-500">
-              Last Updated: {CURRENT_TIMESTAMP} UTC
-            </p>
             <p className="text-center text-sm text-gray-500">
               © 2025 Open Campus. All rights reserved.
             </p>

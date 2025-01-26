@@ -94,11 +94,6 @@ const CONTRACT_ABI = [
     type: "function",
   },
 ];
-
-// Updated timestamp and user
-const CURRENT_TIMESTAMP = "2025-01-26 00:13:28";
-const CURRENT_USER = "AmrendraTheCoder";
-
 interface DocumentResult {
   ipfsUrl: string;
   timestamp: Date;
@@ -260,7 +255,7 @@ export default function SearchPage() {
         <div className="container mx-auto flex h-16 items-center px-4 md:px-6 justify-between">
           <div className="flex items-center space-x-2 font-bold text-xl text-gray-900 dark:text-white">
             <ShieldCheck className="w-8 h-8 text-blue-600" />
-            Open Campus Document Verification
+            EduVault
           </div>
         </div>
       </header>
@@ -274,13 +269,13 @@ export default function SearchPage() {
               Document Search Portal
             </h1>
             <p className="text-center text-gray-600 dark:text-gray-300 mb-8">
-              Search for documents by entering an Ethereum wallet address
+              Search for documents by entering an EDU Chain wallet address
             </p>
 
             <div className="space-y-4">
               <div>
                 <Input
-                  placeholder="Enter Ethereum Address (0x...)"
+                  placeholder="Enter EDU-Chain Wallet Address (0x...)"
                   value={searchAddress}
                   onChange={(e) => setSearchAddress(e.target.value)}
                   className="w-full"
@@ -383,6 +378,7 @@ viewer?embedded=true&url=${searchResult.documentUrl}`}
                               // src={searchResult.documentUrl}
                               className="w-full h-full"
                               title="Document Preview"
+                              sandbox="allow-cross-origin allow-scripts"
                             />
                           </div>
                         </div>
@@ -424,7 +420,7 @@ viewer?embedded=true&url=${searchResult.documentUrl}`}
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col items-center gap-2">
             <p className="text-center text-sm text-gray-500">
-              © 2025 Open Campus. All rights reserved.
+              © 2025 EduVault.
             </p>
           </div>
         </div>

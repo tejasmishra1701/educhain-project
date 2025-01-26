@@ -12,7 +12,7 @@ const Header = () => {
             className="mr-6 flex items-center space-x-2 font-bold sm:inline-block"
             href="/"
           >
-            <span>ResumeOnRails</span>
+            <span>EduVault</span>
           </NextLink>
           {/* <nav className="flex items-center space-x-6 text-sm font-medium">
               <Link href="#faq">FAQ</Link>

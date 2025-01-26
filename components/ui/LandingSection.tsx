@@ -14,7 +14,7 @@ const LandingSections = () => {
             className="flex items-center space-x-2 font-bold text-xl text-gray-900 dark:text-white"
           >
             <ShieldCheck className="w-8 h-8 text-blue-600" />
-            ResumeOnRails
+            EduVault
           </Link>
           <nav className="flex items-center space-x-4">
             <Button asChild variant="ghost">
@@ -32,7 +32,7 @@ const LandingSections = () => {
           <div className="space-y-4">
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white leading-tight tracking-tight">
               Secure Your Educational Journey with{" "}
-              <span className="text-blue-600">ResumeOnRails</span>
+              <span className="text-blue-600">EduVault</span>
             </h1>
             <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
               Revolutionize your credential management with blockchain-powered
@@ -103,7 +103,7 @@ const LandingSections = () => {
       <footer className="bg-white dark:bg-gray-900 border-t dark:border-gray-700 py-6">
         <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 md:mb-0">
-            © 2025 ResumeOnRails. All rights reserved.
+            © 2025 EduVault. All rights reserved.
           </p>
           <nav className="flex gap-4">
             <Link
